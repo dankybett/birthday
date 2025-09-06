@@ -1,69 +1,99 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import './ImageGallery.css';
+import GiftBox from './GiftBox';
 
-const ImageGallery = () => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [audioLoaded, setAudioLoaded] = useState(false);
-  const audioRef = useRef(null);
+const ImageGallery = ({ onImageClick, onGiftAudio, initialIndex = 0 }) => {
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [giftResetKey, setGiftResetKey] = useState(0);
   const touchStartX = useRef(null);
   const touchEndX = useRef(null);
+  const wasOnGiftRef = useRef(false);
 
   const mediaItems = useMemo(() => [
     {
-      image: 'https://picsum.photos/400/600?random=1',
+      image: '/HappyBirthday.png',
       audio: '/birthday-song.mp3',
       title: 'Happy Birthday!'
     },
     {
-      image: 'https://picsum.photos/400/600?random=2',
-      audio: '/Baroque.mp3',
-      title: 'Classical Baroque'
-    },
-    {
-      image: 'https://picsum.photos/400/600?random=3',
+      image: '/coverart/Kpop1.png',
       audio: '/Kpop1.mp3',
       title: 'K-Pop Vibes'
     },
     {
-      image: 'https://picsum.photos/400/600?random=4',
-      audio: '/Kpop2.mp3',
-      title: 'More K-Pop'
-    },
-    {
-      image: 'https://picsum.photos/400/600?random=5',
+      image: '/coverart/Slugclub.png',
       audio: '/Rock.mp3',
       title: 'Rock Anthems'
     },
     {
-      image: 'https://picsum.photos/400/600?random=6',
+      image: '/coverart/Kpok.png',
+      audio: '/Kpop2.mp3',
+      title: 'More K-Pop'
+    },
+    {
+      image: '/coverart/Baroque.png',
+      audio: '/Baroque.mp3',
+      title: 'Classical Baroque'
+    },
+    {
+      image: '/coverart/Zumba1.png',
       audio: '/Zumba X Kpop.mp3',
       title: 'Zumba K-Pop Mix'
+    },
+    {
+      image: 'gift',
+      audio: null,
+      title: 'Birthday Present!',
+      isGift: true
     }
   ], []);
 
+  // Track navigation to/from gift to reset it
+  useEffect(() => {
+    const isCurrentlyOnGift = mediaItems[currentIndex]?.isGift;
+    
+    // If we were on the gift and now we're not, or we're back on the gift after being away
+    if (wasOnGiftRef.current && !isCurrentlyOnGift) {
+      // User navigated away from gift - prepare for reset when they return
+      wasOnGiftRef.current = false;
+    } else if (!wasOnGiftRef.current && isCurrentlyOnGift) {
+      // User returned to gift - reset it
+      setGiftResetKey(prev => prev + 1);
+      wasOnGiftRef.current = true;
+    }
+  }, [currentIndex, mediaItems]);
+
+  // Update current index when initial index changes (returning from PhotoStack)
+  useEffect(() => {
+    setCurrentIndex(initialIndex);
+  }, [initialIndex]);
+
   const handleImageClick = async () => {
-    if (audioRef.current) {
-      try {
-        if (isPlaying) {
-          audioRef.current.pause();
-          setIsPlaying(false);
-        } else {
-          // Reset to beginning if ended
-          if (audioRef.current.ended) {
-            audioRef.current.currentTime = 0;
-          }
-          await audioRef.current.play();
-          setIsPlaying(true);
-        }
-      } catch (error) {
-        console.log('Audio play failed:', error);
-        // Try to load the audio again
-        if (audioRef.current) {
-          audioRef.current.load();
-          setAudioLoaded(false);
-        }
-      }
+    // Check if this is the gift item
+    const currentItem = mediaItems[currentIndex];
+    if (currentItem.isGift) {
+      // Don't do anything here - let the GiftBox handle its own click
+      return;
+    }
+    
+    // Pass the current audio source and title to the parent component
+    if (onImageClick) {
+      const currentAudio = currentItem.audio;
+      const currentTitle = currentItem.title;
+      onImageClick(currentAudio, currentTitle, currentIndex);
+    }
+  };
+
+  const handleGiftClick = () => {
+    // This will be called after the gift opening animation
+    // We can either go to PhotoStack or stay in gallery - let's stay for now
+    console.log('Gift opened! Ticket revealed!');
+  };
+
+  const handleGiftFirstClick = () => {
+    // Start playing the present opening song when gift is first clicked
+    if (onGiftAudio) {
+      onGiftAudio('/presentopeningsong.mp3', 'Present Opening Song');
     }
   };
 
@@ -97,35 +127,6 @@ const ImageGallery = () => {
     }
   };
 
-  useEffect(() => {
-    if (audioRef.current) {
-      const audio = audioRef.current;
-      
-      // Set up event listeners
-      const handleLoadedData = () => setAudioLoaded(true);
-      const handleEnded = () => setIsPlaying(false);
-      const handleError = (e) => {
-        console.log('Audio loading error:', e);
-        setAudioLoaded(false);
-        setIsPlaying(false);
-      };
-      
-      audio.addEventListener('loadeddata', handleLoadedData);
-      audio.addEventListener('ended', handleEnded);
-      audio.addEventListener('error', handleError);
-      
-      // Set the audio source
-      audio.src = mediaItems[currentIndex].audio;
-      audio.load(); // Explicitly load the audio
-      
-      // Cleanup function
-      return () => {
-        audio.removeEventListener('loadeddata', handleLoadedData);
-        audio.removeEventListener('ended', handleEnded);
-        audio.removeEventListener('error', handleError);
-      };
-    }
-  }, [currentIndex, mediaItems]);
 
   return (
     <div 
@@ -141,17 +142,26 @@ const ImageGallery = () => {
         >
           {mediaItems.map((item, index) => (
             <div key={index} className="image-slide">
-              <img
-                src={item.image}
-                alt={item.title}
-                onClick={handleImageClick}
-                className={`gallery-image ${isPlaying ? 'playing' : ''}`}
-              />
-              <div className="image-info">
-                <h3>{item.title}</h3>
-                <p>{audioLoaded ? 'Tap image to play music' : 'Loading audio...'}</p>
-                {isPlaying && <p>🎵 Playing...</p>}
-              </div>
+              {item.isGift ? (
+                <GiftBox 
+                  onClick={handleGiftClick} 
+                  onFirstClick={handleGiftFirstClick}
+                  resetKey={giftResetKey}
+                />
+              ) : (
+                <>
+                  <div className="image-info">
+                    <h3>{item.title}</h3>
+                    <p>Tap image to see photos</p>
+                  </div>
+                  <img
+                    src={item.image}
+                    alt={item.title}
+                    onClick={handleImageClick}
+                    className="gallery-image"
+                  />
+                </>
+              )}
             </div>
           ))}
         </div>
@@ -167,11 +177,6 @@ const ImageGallery = () => {
         ))}
       </div>
       
-      <audio 
-        ref={audioRef} 
-        preload="metadata"
-        crossOrigin="anonymous"
-      />
     </div>
   );
 };

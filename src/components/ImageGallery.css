@@ -27,9 +27,14 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 2rem;
+  justify-content: flex-start;
+  padding: 2rem 2rem 8rem 2rem;
   box-sizing: border-box;
+}
+
+.image-slide:has(.gift-container) {
+  justify-content: flex-start;
+  padding: 2rem 2rem 8rem 2rem;
 }
 
 .gallery-image {
@@ -67,6 +72,7 @@
 .image-info {
   text-align: center;
   color: white;
+  margin-bottom: 2rem;
   margin-top: 1rem;
 }
 

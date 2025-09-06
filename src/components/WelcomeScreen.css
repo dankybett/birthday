@@ -28,6 +28,16 @@
   animation: pulse 2s infinite;
 }
 
+.birthday-image {
+  max-width: 90vw;
+  max-height: 60vh;
+  width: auto;
+  height: auto;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
 @keyframes pulse {
   0%, 100% { opacity: 0.9; }
   50% { opacity: 0.5; }
